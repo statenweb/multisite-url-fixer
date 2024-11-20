@@ -20,6 +20,7 @@ class URLRewrite
     protected $uploads_baseurl;
     protected $uploads_path;
     protected $rewrite_cache = [];
+    protected $subdomain_suffix;
 
     public function __construct()
     {
@@ -33,6 +34,7 @@ class URLRewrite
         $this->minio_bucket = Config::get('MINIO_BUCKET', '');
         $this->replace_url = Config::get('WP_HOME', 'http://localhost');
         $this->port = env('NGINX_PORT') ? ":" . env('NGINX_PORT') : '';
+        $this->subdomain_suffix = Config::get('SUBDOMAIN_SUFFIX') ?: '';
     }
 
     /**
@@ -112,8 +114,8 @@ class URLRewrite
             return $this->rewrite_cache[$url];
         } elseif (strpos($url, 'localhost') === false) {
             // Replace only non-localhost URLs
-            $pattern = '/^(https:\/\/|http:\/\/)?((?:[a-zA-Z0-9_-]+\.)*)([a-zA-Z0-9-]+\.(?:com|net|org|us|edu|gov|co|io))/';
-            $replacement = 'http://${2}localhost' . $this->port;
+            $pattern = '/(https:\/\/|http:\/\/)?((?:[a-zA-Z0-9_-]+)*)(\.[a-zA-Z0-9-]+\.(?:com|net|org|us|edu|gov|co|io))/';
+            $replacement = 'http://${2}'.$this->subdomain_suffix.'.localhost' . $this->port;
             $rewrittenURL = preg_replace($pattern, $replacement, $url);
 
             $this->rewrite_cache[$url] = $rewrittenURL . $query_string;
