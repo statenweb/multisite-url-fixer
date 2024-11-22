@@ -15,12 +15,12 @@ class URLRewrite
 {
     protected $minio_url;
     protected $minio_bucket;
-    protected $replace_url;
     protected $port;
     protected $uploads_baseurl;
     protected $uploads_path;
     protected $rewrite_cache = [];
     protected $subdomain_suffix;
+    protected $parsed_wp_home;
 
     public function __construct()
     {
@@ -32,9 +32,12 @@ class URLRewrite
         // Load environment variables
         $this->minio_url = Config::get('MINIO_URL', '');
         $this->minio_bucket = Config::get('MINIO_BUCKET', '');
-        $this->replace_url = Config::get('WP_HOME', 'http://localhost');
         $this->port = env('NGINX_PORT') ? ":" . env('NGINX_PORT') : '';
         $this->subdomain_suffix = Config::get('SUBDOMAIN_SUFFIX') ?: '';
+
+        $wp_home = Config::get('WP_HOME', 'http://localhost');
+        $this->parsed_wp_home = parse_url($wp_home);
+
     }
 
     /**
@@ -113,9 +116,10 @@ class URLRewrite
 
             return $this->rewrite_cache[$url];
         } elseif (strpos($url, 'localhost') === false) {
+
             // Replace only non-localhost URLs
             $pattern = '/(https:\/\/|http:\/\/)?((?:[a-zA-Z0-9_-]+)*)(\.[a-zA-Z0-9-]+\.(?:com|net|org|us|edu|gov|co|io))/';
-            $replacement = 'http://${2}'.$this->subdomain_suffix.'.localhost' . $this->port;
+            $replacement = 'http://${2}'.$this->subdomain_suffix.'.'.$this->parsed_wp_home['host'].$this->port;
             $rewrittenURL = preg_replace($pattern, $replacement, $url);
 
             $this->rewrite_cache[$url] = $rewrittenURL . $query_string;
