@@ -15,12 +15,12 @@ class URLRewrite
 {
     protected $minio_url;
     protected $minio_bucket;
-    protected $port;
     protected $uploads_baseurl;
     protected $uploads_path;
     protected $rewrite_cache = [];
     protected $subdomain_suffix;
-    protected $parsed_wp_home;
+    protected $wp_base_domain;
+    protected $scheme;
 
     public function __construct()
     {
@@ -32,12 +32,12 @@ class URLRewrite
         // Load environment variables
         $this->minio_url = Config::get('MINIO_URL', '');
         $this->minio_bucket = Config::get('MINIO_BUCKET', '');
-        $this->port = env('NGINX_PORT') ? ":" . env('NGINX_PORT') : '';
         $this->subdomain_suffix = Config::get('SUBDOMAIN_SUFFIX') ?: '';
 
         $wp_home = Config::get('WP_HOME', 'http://localhost');
-        $this->parsed_wp_home = parse_url($wp_home);
-
+        $this->wp_base_domain = get_base_domain($wp_home);
+        $parsed_wp_home = parse_url($wp_home);
+        $this->scheme = $parsed_wp_home['scheme'];
     }
 
     /**
@@ -57,8 +57,10 @@ class URLRewrite
         add_filter('login_redirect', [$this, 'rewriteSiteURL']);
 
         // Uncomment below lines if filters for scripts, styles, and other items are needed
-        // add_filter('script_loader_src', [$this, 'rewriteSiteURL'], 10, 1);
-        // add_filter('style_loader_src', [$this, 'rewriteSiteURL'], 10, 1);
+        add_filter('script_loader_src', [$this, 'rewriteSiteURL']);
+        add_filter('style_loader_src', [$this, 'rewriteSiteURL']);
+
+        add_filter('plugins_url',[$this, 'rewriteSiteURL']);
 
     }
 
@@ -88,7 +90,6 @@ class URLRewrite
             return $url;
         }
 
-
         $base_url = $parsed_url['host'] . (isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '');
         $path = $parsed_url['path'] ?? '';
         $query_string = isset($parsed_url['query']) ? '?' . $parsed_url['query'] : '';
@@ -115,11 +116,11 @@ class URLRewrite
             error_log("Rewrite media URL from $url to $rewrittenURL");
 
             return $this->rewrite_cache[$url];
-        } elseif (strpos($url, 'localhost') === false) {
+        } elseif (!strpos($url, 'localhost') && !strpos($url, $this->subdomain_suffix . "." . $this->wp_base_domain['with_port'])) {
 
             // Replace only non-localhost URLs
-            $pattern = '/(https:\/\/|http:\/\/)?((?:[a-zA-Z0-9_-]+)*)(\.[a-zA-Z0-9-]+\.(?:com|net|org|us|edu|gov|co|io))/';
-            $replacement = 'http://${2}'.$this->subdomain_suffix.'.'.$this->parsed_wp_home['host'].$this->port;
+            $pattern = "/(?:https:\/\/|http:\/\/)?(?:([a-zA-Z0-9_-]+))?(?:[:\.a-zA-Z0-9_-]+)(\/.*)?/";
+            $replacement =  $this->scheme . '://${1}' . $this->subdomain_suffix . '.' . $this->wp_base_domain['with_port'] . '${2}';
             $rewrittenURL = preg_replace($pattern, $replacement, $url);
 
             $this->rewrite_cache[$url] = $rewrittenURL . $query_string;
