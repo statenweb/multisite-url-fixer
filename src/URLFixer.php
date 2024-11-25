@@ -21,6 +21,7 @@ class URLRewrite
     protected $subdomain_suffix;
     protected $wp_base_domain;
     protected $scheme;
+    protected $rewrite_overrides = []; // Add a property for overrides
 
     public function __construct()
     {
@@ -38,6 +39,18 @@ class URLRewrite
         $this->wp_base_domain = get_base_domain($wp_home);
         $parsed_wp_home = parse_url($wp_home);
         $this->scheme = $parsed_wp_home['scheme'];
+
+        $this->rewrite_overrides = $this->loadOverrides();
+
+    }
+
+    private function loadOverrides(): array
+    {
+        $overrides_file = dirname(__DIR__, 1) . '/overrides.php';
+        if (file_exists($overrides_file)) {
+            return include $overrides_file;
+        }
+        return []; // Return an empty array if the file does not exist
     }
 
     /**
@@ -90,6 +103,19 @@ class URLRewrite
             return $url;
         }
 
+        // Check overrides and skip rewriting if the URL matches any pattern
+        if (isset($this->rewrite_overrides)) {
+            foreach ($this->rewrite_overrides as $pattern) {
+                if (str_starts_with($pattern, '!') && strpos($url, substr($pattern, 1)) !== false) {
+                    error_log("Skipping rewrite for URL $url due to negation override: $pattern");
+                    return $url;
+                } elseif (@preg_match($pattern, $url) || strpos($url, $pattern) !== false) {
+                    error_log("Skipping rewrite for URL $url due to override match: $pattern");
+                    return $url;
+                }
+            }
+        }
+
         $base_url = $parsed_url['host'] . (isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '');
         $path = $parsed_url['path'] ?? '';
         $query_string = isset($parsed_url['query']) ? '?' . $parsed_url['query'] : '';
@@ -122,7 +148,6 @@ class URLRewrite
             $pattern = "/(?:https:\/\/|http:\/\/)?(?:([a-zA-Z0-9_-]+))?(?:[:\.a-zA-Z0-9_-]+)(\/.*)?/";
             $replacement =  $this->scheme . '://${1}' . $this->subdomain_suffix . '.' . $this->wp_base_domain['with_port'] . '${2}';
             $rewrittenURL = preg_replace($pattern, $replacement, $url);
-
             $this->rewrite_cache[$url] = $rewrittenURL . $query_string;
             error_log("Rewrite generic URL from $url to $rewrittenURL");
             return $this->rewrite_cache[$url];
