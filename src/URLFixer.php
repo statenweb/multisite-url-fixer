@@ -22,6 +22,7 @@ class URLRewrite
     protected $wp_base_domain;
     protected $scheme;
     protected $rewrite_overrides = []; // Add a property for overrides
+    protected $port;
 
     public function __construct()
     {
@@ -34,6 +35,7 @@ class URLRewrite
         $this->minio_url = Config::get('MINIO_URL', '');
         $this->minio_bucket = Config::get('MINIO_BUCKET', '');
         $this->subdomain_suffix = Config::get('SUBDOMAIN_SUFFIX') ?: '';
+        $this->port = Config::get('NGINX_PORT') ?: '';
 
         $wp_home = Config::get('WP_HOME', 'http://localhost');
         $this->wp_base_domain = get_base_domain($wp_home);
@@ -103,17 +105,18 @@ class URLRewrite
             return $url;
         }
 
-        // Check overrides and skip rewriting if the URL matches any pattern
-        if (isset($this->rewrite_overrides)) {
-            foreach ($this->rewrite_overrides as $pattern) {
-                if (str_starts_with($pattern, '!') && strpos($url, substr($pattern, 1)) !== false) {
-                    error_log("Skipping rewrite for URL $url due to negation override: $pattern");
-                    return $url;
-                } elseif (@preg_match($pattern, $url) || strpos($url, $pattern) !== false) {
-                    error_log("Skipping rewrite for URL $url due to override match: $pattern");
-                    return $url;
-                }
+        // Check for localhost and missing port
+        if ($parsed_url['host'] === 'localhost' && !isset($parsed_url['port'])) {
+            $rewrittenURL = "{$parsed_url['scheme']}://{$parsed_url['host']}:{$this->port}{$parsed_url['path']}";
+
+            // Append the query string if it exists
+            if (!empty($parsed_url['query'])) {
+                $rewrittenURL .= '?' . $parsed_url['query'];
             }
+
+            error_log("Rewritten localhost URL from $url to $rewrittenURL");
+            $this->rewrite_cache[$url] = $rewrittenURL;
+            return $rewrittenURL;
         }
 
         $base_url = $parsed_url['host'] . (isset($parsed_url['port']) ? ':' . $parsed_url['port'] : '');
