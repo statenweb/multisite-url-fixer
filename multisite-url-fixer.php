@@ -8,7 +8,7 @@
 // Load Bedrock's autoload to ensure environment variables are available
 require_once(dirname(__DIR__, 4) . '/vendor/autoload.php');
 require_once(dirname(__DIR__, 4) . '/config/application.php');
-require_once(__DIR__ . '/src/URLFixer.php');
+require_once(__DIR__ . '/URLFixer.php');
 
 use URLFixer\URLRewrite;
 (new URLRewrite())->addFilters();
