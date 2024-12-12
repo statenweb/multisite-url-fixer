@@ -2,10 +2,11 @@
   "name": "mattv8/multisite-url-fixer",
   "type": "wordpress-muplugin",
   "license": "MIT",
-  "description":
-    "Fixes WordPress issues with home and site URL on multisite when using Bedrock",
+  "description": "Fixes WordPress issues with home and site URL on multisite when using Bedrock",
   "homepage": "https://github.com/mattv8/multisite-url-fixer",
-  "keywords": ["wordpress"],
+  "keywords": [
+    "wordpress"
+  ],
   "support": {
     "issues": "https://github.com/mattv8/multisite-url-fixer/issues"
   },
@@ -21,6 +22,25 @@
     "squizlabs/php_codesniffer": "^3.1"
   },
   "scripts": {
-    "test": ["phpcs --ignore=vendor --extensions=php --standard=PSR2 ."]
+    "test": [
+      "phpcs --ignore=vendor --extensions=php --standard=PSR2 ."
+    ],
+    "post-install-cmd": [
+      "@create-overrides"
+    ],
+    "post-update-cmd": [
+      "@create-overrides"
+    ]
+  },
+  "scripts-descriptions": {
+    "create-overrides": "Ensure the overrides.php file exists and create it if missing."
+  },
+  "extra": {
+    "create-overrides": [
+      "if [ ! -f overrides.php ]; then",
+      "  echo '<?php\n// Custom overrides go here.' > overrides.php",
+      "  echo 'Created overrides.php';",
+      "fi"
+    ]
   }
 }
