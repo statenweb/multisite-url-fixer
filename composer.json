@@ -38,7 +38,7 @@
   "extra": {
     "create-overrides": [
       "if [ ! -f overrides.php ]; then",
-      "  echo '<?php\n// Custom overrides go here.' > overrides.php",
+      "  echo '<?php\n// Custom overrides go here.\nSee https://github.com/mattv8/multisite-url-fixer/blob/master/overrides.php for more info.' > overrides.php",
       "  echo 'Created overrides.php';",
       "fi"
     ]
