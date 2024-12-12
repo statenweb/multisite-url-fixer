@@ -27,11 +27,13 @@
  * - Use wildcards sparingly to avoid unintended matches.
  * - Regular expressions are more powerful but require valid syntax.
  */
-return [
-    // Add your overrides below:
-    'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js', // Exact match
-    '*/example_wildcard', // Wildcard match
-    '/^https:\/\/cdn\.(example|anotherexample)\.com\/.+$/', // Regular expression
-    'www.example.com/specific/*', // Wildcard for a specific directory
-    '!example.com', // Negation
-];
+
+# Example:
+// return [
+//     // Add your overrides below:
+//     'https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js', // Exact match
+//     '*/example_wildcard', // Wildcard match
+//     '/^https:\/\/cdn\.(example|anotherexample)\.com\/.+$/', // Regular expression
+//     'www.example.com/specific/*', // Wildcard for a specific directory
+//     '!example.com', // Negation
+// ];

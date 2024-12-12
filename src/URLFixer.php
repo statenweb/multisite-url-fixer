@@ -105,6 +105,15 @@ class URLRewrite
             return $url;
         }
 
+        // Check overrides
+        foreach ($this->rewrite_overrides as $override) {
+            if ($this->matchOverride($override, $url)) {
+                error_log("URL $url was excluded from rewrite (rule: $override)");
+                $this->rewrite_cache[$url] = $url; // Cache the original URL
+                return $url; // Return the original URL
+            }
+        }
+
         // Check for localhost and missing port
         if ($parsed_url['host'] === 'localhost' && !isset($parsed_url['port'])) {
             $rewrittenURL = "{$parsed_url['scheme']}://{$parsed_url['host']}:{$this->port}{$parsed_url['path']}";
@@ -159,6 +168,48 @@ class URLRewrite
         // If already pointing to localhost without MinIO
         $this->rewrite_cache[$url] = $url;
         return $url;
+    }
+
+    /**
+     * Check if the given URL matches an override pattern.
+     *
+     * @param string $override
+     * @param string $url
+     * @return bool
+     */
+    private function matchOverride($override, $url): bool
+    {
+        // Ensure the URL has a scheme
+        $parsed_url = parse_url($url);
+        if (!isset($parsed_url['scheme'])) {
+            $url = 'http://' . ltrim($url, '/');
+        }
+
+        // Handle wildcard patterns
+        if (strpos($override, '*') !== false) {
+            // If override does not include a scheme, add a scheme to match dynamically
+            if (!preg_match('/^https?:\/\//', $override)) {
+                $override = 'https?://' . ltrim($override, '/');
+            }
+            $escaped_override = preg_quote($override, '/');
+
+            // Restore the regex characters like `?` that were escaped
+            $escaped_override = str_replace(['\?', '\*'], ['?', '.*'], $escaped_override);
+            $pattern = '/^' . $escaped_override . '$/';
+            return (bool) preg_match($pattern, $url);
+        }
+
+        // Handle regex patterns explicitly (starting with `/`)
+        if (strpos($override, '/') === 0) {
+            return (bool) preg_match($override, $url);
+        }
+
+        // Handle exact matches
+        if (!preg_match('/^https?:\/\//', $override)) {
+            // Add default scheme for exact match if missing
+            $override = 'http://' . ltrim($override, '/');
+        }
+        return $override === $url;
     }
 
     /**
