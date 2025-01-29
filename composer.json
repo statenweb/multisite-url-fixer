@@ -1,5 +1,5 @@
 {
-  "name": "mattv8/multisite-url-fixer",
+  "name": "statenweb/multisite-url-fixer",
   "type": "wordpress-muplugin",
   "license": "MIT",
   "description": "Fixes WordPress issues with home and site URL on multisite when using Bedrock",
